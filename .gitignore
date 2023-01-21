@@ -25,3 +25,6 @@ yarn-debug.log*
 yarn-error.log*
 
 server/source/parseToDatabase.ts
+server/Stations.csv
+.env
+server/source/csvToJson.ts
