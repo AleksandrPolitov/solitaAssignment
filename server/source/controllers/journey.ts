@@ -1,13 +1,11 @@
 import { Request, Response, NextFunction, response } from 'express';
 
-import { JourneyModel, Journey } from "../models/journey"
+import JourneyModel from "../models/journey"
 
-export const getJourneys = async (req: Request, res: Response, next: NextFunction) => {
-    let count=-1;
-    JourneyModel.count({}, function (err, res) {
-        if (res == -1 || err) res.send(404);
-        count = res;
-    })
+
+// GET REQUESTS
+const getJourneys = async (req: Request, res: Response, next: NextFunction) => {
+    let count = await JourneyModel.count({})
 
     let page: number = req.query.page ? parseInt(req.query.page as string) : 1;
     let limit: number = req.query.limit ? Math.min(Math.max(parseInt(req.query.limit as string), 1), 100) : 50
@@ -16,13 +14,54 @@ export const getJourneys = async (req: Request, res: Response, next: NextFunctio
 
     console.log("page", page)
 
-    JourneyModel.paginate({}, { page: page, limit: limit, sort: { [sortBy]: sortAsc ? 1 : -1 } }).then(function (result) {
-        res.send({ count: count, res: result.docs })
+    res.send(await JourneyModel.paginate({}, { page: page, limit: limit, sort: { [sortBy]: sortAsc ? 1 : -1 } }));
+}
+
+const getJourney = async (req: Request, res: Response, next: NextFunction) => {
+    let id: String = req.params.id ? req.params.id as string : null;
+    if (!id) return res.send(404);
+
+    res.send(await JourneyModel.findById(id))
+}
+
+const getJourneyByStationId = async (req: Request, res: Response, next: NextFunction) => {
+    let id: String = req.params.id ? req.params.id as string : null;
+    if (!id) return res.send(404);
+
+    res.send(await JourneyModel.findById(id));
+}
+
+
+const createJourney = async (req: Request, res: Response, next: NextFunction) => {
+    let departureDate: Date = req.body.departureDate ? new Date(req.body.departureDate) : null;
+    let returnDate: Date = req.body.returnDate ? new Date(req.body.returnDate) : null;
+    let departureStationId: number = req.body.departureStationId;
+    let returnStationId: number = req.body.departureStationId;
+    let distance: number = req.body.distance;
+    let duration: number = req.body.duration;
+
+    if(!departureDate || !returnDate || !departureStationId || !returnStationId || !distance || !duration)
+        return res.send(400);
+    
+    let newJourney = new JourneyModel({
+        departureDate: departureDate,
+        returnDate: returnDate,
+        departureStationId: departureStationId,
+        returnStationId: returnStationId,
+        distance: distance,
+        duration: duration
     });
+
+    try {
+        let newJourneyRes = await newJourney.save();
+        return res.send({ journey: newJourneyRes });
+    } catch (e) {
+        switch (e.code) {
+            case 11000:
+                return res.status(400).send({ err: "Already exists!" });
+        }
+    }
 }
 
-export const getJourney = async (req: Request, res: Response, next: NextFunction) => {
-    let id: number = req.params.id ? parseInt(req.query.page as string) : 1;
 
-    JourneyModel.find({})
-}
+export default { getJourneys, getJourney, getJourneyByStationId, createJourney };
