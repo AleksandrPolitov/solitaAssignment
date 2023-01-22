@@ -1,6 +1,7 @@
 import * as express from "express";
 import * as mongoose from 'mongoose';
 import * as dotenv from "dotenv"
+import * as cors from "cors"
 
 import JourneyController from "./controllers/journey";
 import StationController from "./controllers/station";
@@ -12,6 +13,7 @@ const initConnection = require('./db/connection')
 const app: express.Express = express();
 const port = process.env.PORT;
 
+app.use(cors())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
