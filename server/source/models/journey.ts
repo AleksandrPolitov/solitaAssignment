@@ -30,7 +30,7 @@ type PaginateMethod<T> = (
 ) => Promise<PaginateResult<T>>;
 
 @plugin(mongoosePaginate)
-export class Journey {
+class Journey {
     @prop()
     departureDate: Date;
     @prop()
@@ -38,7 +38,11 @@ export class Journey {
     @prop()
     departureStationId: number;
     @prop()
+    departureStationName: string;
+    @prop()
     returnStationId: number;
+    @prop()
+    returnStationName: string;
     @prop()
     distance: number;
     @prop()
@@ -48,4 +52,4 @@ export class Journey {
 }
 
 
-export const JourneyModel  = getModelForClass(Journey);
+export default getModelForClass(Journey);
