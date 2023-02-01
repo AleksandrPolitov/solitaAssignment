@@ -1,27 +1,34 @@
 import { Request, Response, NextFunction, response } from 'express';
 
 import JourneyModel from "../models/journey"
-
+import StationModel from "../models/station"
 
 // GET REQUESTS
 const getJourneys = async (req: Request, res: Response, next: NextFunction) => {
-    let count = await JourneyModel.count({})
-
     let page: number = req.query.page ? parseInt(req.query.page as string) : 1;
-    let limit: number = req.query.limit ? Math.min(Math.max(parseInt(req.query.limit as string), 1), 100) : 50
-    let sortBy: string = req.query.sortBy ? req.query.sortBy as string : "departureDate"
-    let sortAsc: boolean = req.query.sortAsc ? ((req.query.sortAsc as string).toLowerCase() == 'true' ? true : false) : false
-
-    console.log(page, limit, sortBy, sortAsc)
+    let limit: number = req.query.limit ? Math.min(Math.max(parseInt(req.query.limit as string), 1), 100) : 50;
+    let sortBy: string = req.query.sortBy ? req.query.sortBy as string : "departureDate";
+    let sortAsc: boolean = req.query.sortAsc ? ((req.query.sortAsc as string).toLowerCase() == 'true' ? true : false) : false;
 
     res.send(await JourneyModel.paginate({}, { page: page, limit: limit, sort: { [sortBy]: sortAsc ? 1 : -1 } }));
 }
 
 const getJourney = async (req: Request, res: Response, next: NextFunction) => {
     let id: String = req.params.id ? req.params.id as string : null;
-    if (!id) return res.send(404);
+    if (!id) return res.send(404); 
 
-    res.send(await JourneyModel.findById(id))
+    const journey = await JourneyModel.findById(id);
+
+    console.log(journey)
+
+    res.send({
+        journey: journey,
+        stations:
+        {
+            departure: await StationModel.findById(journey.departureStationId),
+            return: await StationModel.findById(journey.returnStationId)
+        }
+    })
 }
 
 const getJourneyByStationId = async (req: Request, res: Response, next: NextFunction) => {

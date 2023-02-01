@@ -38,7 +38,11 @@ class Journey {
     @prop()
     departureStationId: number;
     @prop()
+    departureStationName: string;
+    @prop()
     returnStationId: number;
+    @prop()
+    returnStationName: string;
     @prop()
     distance: number;
     @prop()

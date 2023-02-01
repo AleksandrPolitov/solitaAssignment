@@ -40,7 +40,7 @@ class Station {
     adress?: string;
     @prop()
     kaupunki?: string;
-
+ 
     @prop()
     stad?: string;
     @prop()

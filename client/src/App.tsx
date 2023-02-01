@@ -4,17 +4,18 @@ import './App.css';
 import Journeys from './components/Journeys';
 import Journey from './components/Journey';
 import Main from "./components/Main";
+import Stations from './components/Stations';
+import Station from './components/Station';
 
-function MyMessage(props: { message: string }) {
-    return <div>My message is: {props.message}</div>;
-}
 
 function App() {
   return (
     <Routes>
       <Route path='/' element={<Navigate to="/journeys" />} />
       <Route path='/journeys' element={<Journeys />} />
-      <Route path='/journeys/:id' element={<Journey />} />
+      <Route path='/journeys/:_id' element={<Journey />} />
+      <Route path='/stations' element={<Stations />} />
+      <Route path='/stations/:_id' element={<Station />} />
     </Routes>
   );
 }

@@ -1,30 +1,172 @@
 import { Request, Response, NextFunction, response } from 'express';
+const async = require('async');
 
 import StationModel from "../models/station"
 import JourneyModel from "../models/journey"
 
 const getStations = async (req: Request, res: Response, next: NextFunction) => {
-    let count = await StationModel.count({});
-
     let page: number = req.query.page ? parseInt(req.query.page as string) : 1;
     let limit: number = req.query.limit ? Math.min(Math.max(parseInt(req.query.limit as string), 1), 100) : 50
     let sortBy: string = req.query.sortBy ? req.query.sortBy as string : "departureDate"
     let sortAsc: boolean = req.query.sortAsc ? ((req.query.sortAsc as string).toLowerCase() == 'true' ? true : false) : true
 
-    let stations = await StationModel.paginate({}, { page: page, limit: limit, sort: { [sortBy]: sortAsc ? 1 : -1 } });
-    res.send({ count: count, res: stations.docs })
+    res.send(await StationModel.paginate({}, { page: page, limit: limit, sort: { [sortBy]: sortAsc ? 1 : -1 } }));
 }
 
 const getStation = async (req: Request, res: Response, next: NextFunction) => {
-    let id: String = req.params.id ? req.params.id as string : null;
+    let id: string = req.params.id ? req.params.id as string : null;
     if (!id) return res.send(404);
 
-    let station = await StationModel.findById(id);
+    const start = performance.now();
 
-    let departuresFromStation = await JourneyModel.find({ departureStationId: id });
-    let returnsToStation = await JourneyModel.find({ returnStationId: id });
 
-    res.status(200).send({ station: station, departures: departuresFromStation, returns: returnsToStation });
+    async.parallel([
+        function(callback) {
+            StationModel.findById(id, callback);
+        },
+        function(callback) {
+            JourneyModel.find({ departureStationId: id }).limit(50).sort({departureDate: -1}).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.find({ returnStationId: id }).limit(50).sort({ departureDate: -1 }).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.count({ departureStationId: id }).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.count({ returnStationId: id }).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.aggregate([
+                {
+                    $match: {
+                        departureStationId: parseInt(id)
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        avgDistance: { $avg: '$distance' }
+                    }
+                }
+            ]).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.aggregate([
+                {
+                    $match: {
+                        returnStationId: parseInt(id)
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        avgDistance: { $avg: '$distance' }
+                    }
+                }
+            ]).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.aggregate([
+                { $match: { returnStationId: parseInt(id) } },
+                { $group: { _id: "$departureStationId", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 5 }
+            ]).exec(callback);
+        },
+        function(callback) {
+            JourneyModel.aggregate([
+                { $match: { departureStationId: parseInt(id) } },
+                { $group: { _id: "$returnStationId", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 5 }
+            ]).exec(callback);
+        }
+    ],
+        function (err, results) {
+            if (err) {
+                console.log(err);
+                return;
+            }
+            const end = performance.now();
+            console.log("Time taken: ", end - start);
+            res.status(200).send({
+                station: results[0],
+                departures: results[1],
+                returns: results[2],
+                departuresCount: results[3],
+                returnsCount: results[4],
+                avgDistanceDeparture: results[5][0].avgDistance.toFixed(2),
+                avgDistanceReturn: results[6][0].avgDistance.toFixed(2),
+
+            })
+        })
+
+
+
+
+    // let station = await StationModel.findById(id);
+
+    // let departuresFromStation = await JourneyModel.find({ departureStationId: id }).limit(50).sort({departureDate: -1});
+    // let returnsToStation = await JourneyModel.find({ returnStationId: id }).limit(50).sort({ departureDate: -1 });
+
+    // let countDeparturesFromStation = await JourneyModel.count({ departureStationId: id })
+    // let countReturnsFromStation = await JourneyModel.count({ returnStationId: id })
+
+    // let avgDistanceDeparture = await JourneyModel.aggregate([
+    //     {
+    //       $match: {
+    //         departureStationId: parseInt(id)
+    //       }
+    //     },
+    //     {
+    //       $group: {
+    //         _id: null,
+    //         avgDistance: { $avg: '$distance' }
+    //       }
+    //     }
+    // ]);
+
+    // let avgDistanceReturn = await JourneyModel.aggregate([
+    //     {
+    //         $match: {
+    //             returnStationId: parseInt(id)
+    //         }
+    //     },
+    //     {
+    //         $group: {
+    //             _id: null,
+    //             avgDistance: { $avg: '$distance' }
+    //         }
+    //     }
+    // ]);
+
+    // let topDepartureStations = await JourneyModel.aggregate([
+    //     { $match: { returnStationId: parseInt(id) } }, // filter the journeys that start from the specific station
+    //     { $group: { _id: "$departureStationId", count: { $sum: 1 } } }, // group the journeys by returnStation and count the number of occurrences
+    //     { $sort: { count: -1 } }, // sort the groups by the count in descending order
+    //     { $limit: 5 } // limit the result to 5
+    // ]);
+
+    // let topReturnStations = await JourneyModel.aggregate([
+    //     { $match: { departureStationId: parseInt(id) } }, // filter the journeys that start from the specific station
+    //     { $group: { _id: "$returnStationId", count: { $sum: 1 } } }, // group the journeys by returnStation and count the number of occurrences
+    //     { $sort: { count: -1 } }, // sort the groups by the count in descending order
+    //     { $limit: 5 } // limit the result to 5
+    // ]);
+
+
+    // console.log(topDepartureStations, topReturnStations)
+
+    // res.status(200).send({
+    //     station: station,
+    //     departuresCount: countDeparturesFromStation,
+    //     returnsCount: countReturnsFromStation,
+    //     avgDistanceDeparture: avgDistanceDeparture[0].avgDistance.toFixed(2),
+    //     avgDistanceReturn: avgDistanceReturn[0].avgDistance.toFixed(2),
+    //     departures: departuresFromStation,
+    //     returns: returnsToStation
+    // });
 }
 
 const createStation = async (req: Request, res: Response, next: NextFunction) => {
