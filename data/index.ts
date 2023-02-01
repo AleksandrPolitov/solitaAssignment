@@ -2,6 +2,8 @@ import { parse } from 'csv-parse';
 import * as fs from 'fs';
 import mongoose from 'mongoose';
 
+let MONGO_CONNECT: string = "";
+
 interface JourneyData {
     departureDate: Date;
     returnDate: Date;
@@ -54,11 +56,10 @@ fs.createReadStream('C:\\Users\\be_ha\\Downloads\\2021-07.csv')
         parseInt(row[6]) &&
         parseInt(row[7])))
         data.push(newData);
-    // console.log(data.at(-1))
 })
 .on('end', async () => {
     try {
-        await mongoose.connect('mongodb+srv://admin:admin123@solitapreassignment.ps5jtov.mongodb.net/?retryWrites=true&w=majority', {});
+        await mongoose.connect(MONGO_CONNECT, {});
 
         console.log(data.length)
 
@@ -66,7 +67,6 @@ fs.createReadStream('C:\\Users\\be_ha\\Downloads\\2021-07.csv')
         
         console.log(filteredData.length)
 
-        // await JourneyModel.deleteMany({});
 
         await JourneyModel.insertMany(filteredData);
 

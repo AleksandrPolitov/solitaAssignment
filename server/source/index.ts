@@ -1,5 +1,4 @@
 import * as express from "express";
-import * as mongoose from 'mongoose';
 import * as dotenv from "dotenv"
 import * as cors from "cors"
 
