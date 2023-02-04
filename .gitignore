@@ -28,3 +28,4 @@ server/source/parseToDatabase.ts
 server/Stations.csv
 .env
 server/source/csvToJson.ts
+data/Stations.csv

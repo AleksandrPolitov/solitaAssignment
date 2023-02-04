@@ -4,9 +4,10 @@
   "description": "",
   "main": "build/index.js",
   "scripts": {
+    "prebuild": "npm i",
     "build": "tsc",
     "prestart": "npm run build",
-    "start": "node .",
+    "start": "node ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
